@@ -32,12 +32,12 @@ fi
 docker exec -i hexsim-base sh -lc 'command -v pixi >/dev/null'
 
 # Build important tiled configuration files and copy them to the base docker container ---------------------------------------------------------------------
-tiled_profiles_dir="/app/.config/tiled/profiles"
+tiled_profiles_dir="/etc/tiled/profiles"
 
 docker exec -it hexsim-base mkdir -p "$tiled_profiles_dir"
 
 # Builds the profile.yml
-LOCAL_TILED_URI="http://127.0.0.1:8000/api/v1/metadata/${ENDSTATION}/raw"
+LOCAL_TILED_URI="https://tiled.nsls2.bnl.gov/api/v1/metadata/${ENDSTATION}/raw"
 
 if [ -f "$post_data_security_file" ] && grep -qw "$ENDSTATION" "$post_data_security_file"; then
         echo "Beamline ${ENDSTATION} is in post_data_security.txt, creating a direct profile for Tiled"

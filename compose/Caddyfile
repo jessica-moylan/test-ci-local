@@ -1,0 +1,4 @@
+tiled.nsls2.bnl.gov {
+    tls internal
+    reverse_proxy http://tiled:8000
+}

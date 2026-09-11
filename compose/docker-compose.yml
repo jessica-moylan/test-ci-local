@@ -32,10 +32,13 @@ services:
     tty: true
     tmpfs:
       - /etc/bluesky
-      - /.config
       - /nsls2/data
+    volumes:
+      - beamline_config:/app/.config/tiled:rw
     environment:
       PYTHONPATH: /workspace
+    extra_hosts:
+      - "tiled.nsls2.bnl.gov:host-gateway"
 
   redis:
     image: redis:7
@@ -111,11 +114,13 @@ services:
     image: ghcr.io/bluesky/tiled:latest
     container_name: hexsim-tiled
     volumes:
+      - beamline_config:/app/.config/tiled:ro
       - beamline_config:/config:ro
-    # Ephemeral catalog (SQLite temp) — reset on restart; seed re-creates hex/raw.
     command: ["tiled", "serve", "catalog", "--temp", "--host", "0.0.0.0", "--port", "8000", "--api-key", "secret"]
     ports:
       - "127.0.0.1:8000:8000"
+    extra_hosts:
+      - "tiled.nsls2.bnl.gov:host-gateway"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
       interval: 30s
@@ -127,11 +132,11 @@ services:
     container_name: hexsim-caddy
     restart: unless-stopped
     ports:
-      - "127.0.0.1:80:80"
-      - "127.0.0.1:443:443"
+      - "0.0.0.0:80:80"
+      - "0.0.0.0:443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - beamline_config:/config:ro
+      - beamline_config:/beamline_config:ro
       - caddy_data:/data
       - caddy_config:/config/caddy
     depends_on:
