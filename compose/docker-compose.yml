@@ -30,15 +30,35 @@ services:
     working_dir: /workspace
     stdin_open: true
     tty: true
+    command: sh -c "update-ca-certificates --fresh && exec tail -f /dev/null"
     tmpfs:
       - /etc/bluesky
       - /nsls2/data
     volumes:
+      - base_workspace:/workspace
       - beamline_config:/app/.config/tiled:rw
+      - caddy_data:/usr/local/share/ca-certificates/caddy:ro # Mount CA root
     environment:
       PYTHONPATH: /workspace
+      REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+      SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+
+  tiled:
+    image: ghcr.io/bluesky/tiled:latest
+    container_name: hexsim-tiled
+    volumes:
+      - beamline_config:/app/.config/tiled:ro
+      - beamline_config:/config:ro
+    command: ["tiled", "serve", "catalog", "--temp", "--host", "0.0.0.0", "--port", "8000", "--api-key", "secret"]
+    ports:
+      - "127.0.0.1:8000:8000"
     extra_hosts:
       - "tiled.nsls2.bnl.gov:host-gateway"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   redis:
     image: redis:7
@@ -109,24 +129,7 @@ services:
       interval: 5s
       timeout: 10s
       retries: 30
-
-  tiled:
-    image: ghcr.io/bluesky/tiled:latest
-    container_name: hexsim-tiled
-    volumes:
-      - beamline_config:/app/.config/tiled:ro
-      - beamline_config:/config:ro
-    command: ["tiled", "serve", "catalog", "--temp", "--host", "0.0.0.0", "--port", "8000", "--api-key", "secret"]
-    ports:
-      - "127.0.0.1:8000:8000"
-    extra_hosts:
-      - "tiled.nsls2.bnl.gov:host-gateway"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
+      
   caddy:
     image: caddy:2
     container_name: hexsim-caddy
@@ -139,5 +142,9 @@ services:
       - beamline_config:/beamline_config:ro
       - caddy_data:/data
       - caddy_config:/config/caddy
+    networks:
+      default:
+        aliases:
+          - tiled.nsls2.bnl.gov
     depends_on:
       - tiled

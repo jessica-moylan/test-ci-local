@@ -29,7 +29,12 @@ if [ ! -d "${TMP_REPO}/.git" ]; then
 fi
 
 # Verify pixi is available in the base container.
-docker exec -i hexsim-base sh -lc 'command -v pixi >/dev/null'
+# docker exec -i hexsim-base sh -lc 'command -v pixi >/dev/null'
+
+# Build the pixi environment from the copied beamline repo so later docker exec
+# calls can reuse the persisted project environment.
+echo "here"
+docker exec -d hexsim-base sh -lc "cd '/workspace/hex-profile-collection' && [ -f pixi.toml ] && pixi install -e terminal"
 
 # Build important tiled configuration files and copy them to the base docker container ---------------------------------------------------------------------
 tiled_profiles_dir="/etc/tiled/profiles"
@@ -68,10 +73,12 @@ nsls2:
         Authorization: "Apikey ${TILED_SERVER_API_KEY}"
 EOF
 
+
 # Finish tiled setup
 echo "[base] Tiled config files created, now set up tiled"
 export compose_file="${root}/compose/docker-compose.yml"
 export BEAMLINE_ACRONYM="${ENDSTATION}"
+export BEAMLINE_REPO="${BEAMLINE_REPO}"
 
 "$here/tiled.sh"
 
@@ -80,15 +87,15 @@ export BEAMLINE_ACRONYM="${ENDSTATION}"
 
 
 # Runs bsui.py interactively within the base docker container ----------------------------------------------------------------------------------------------------------------
-docker exec -it hexsim-base bash -lc "
-cd /workspace/${BEAMLINE_REPO}
-export BEAMLINE_ACRONYM=${ENDSTATION}
-export ENDSTATION_ACRONYM=${ENDSTATION}
-export TILED_BLUESKY_WRITING_API_KEY_${ENDSTATION^^}=secret
-export TILED_BLUESKY_WRITING_API_KEY=secret
-export TILED_SERVER_API_KEY=secret
-pixi run -e terminal ipython --profile=test --pdb -i /workspace/scripts/bsui.py
-"
+# docker exec -it hexsim-base bash -lc "
+# cd /workspace/${BEAMLINE_REPO}
+# export BEAMLINE_ACRONYM=${ENDSTATION}
+# export ENDSTATION_ACRONYM=${ENDSTATION}
+# export TILED_BLUESKY_WRITING_API_KEY_${ENDSTATION^^}=secret
+# export TILED_BLUESKY_WRITING_API_KEY=secret
+# export TILED_SERVER_API_KEY=secret
+# pixi run -e terminal ipython --profile=test --pdb -i /workspace/scripts/bsui.py
+# "
 
 
 # Extract important variables and save that to a file that will be in the directory, ex (endstation, redis-host)
