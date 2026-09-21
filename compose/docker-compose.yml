@@ -38,6 +38,7 @@ services:
       - base_workspace:/workspace
       - beamline_config:/app/.config/tiled:rw
       - caddy_data:/usr/local/share/ca-certificates/caddy:ro # Mount CA root
+      - ./certs/redis.crt:/usr/local/share/ca-certificates/redis.crt:ro
     environment:
       PYTHONPATH: /workspace
       REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
@@ -90,7 +91,7 @@ services:
       interval: 3s
       timeout: 3s
       retries: 20
-
+      
   mongo:
     image: mongo:4.4
     container_name: hexsim-mongo

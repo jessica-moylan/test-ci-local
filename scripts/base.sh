@@ -1,25 +1,54 @@
-# get the repo with a specific branch from a specific path and copy it to the /workspace directory in the base docker container
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 root="$(cd "${here}/.." && pwd)"
 compose_file="${root}/compose/docker-compose.yml"
 post_data_security_file="${root}/configs/post_data_security.txt"
+certdir="$root/compose/certs"
 
 ENDSTATION="${1:-hex}"
 BEAMLINE_REPO="${2:-hex-profile-collection}"
 echo "Using endstation: ${ENDSTATION}"
 echo "Using beamline repo: ${BEAMLINE_REPO}"
 BEAMLINE_BRANCH="${3:-main}"
+REDIS_HOST=$4
 
-# Variables ----------------------------------------------------------------------------------------------------------------------------------------------
+# Variables ----------------------------------------------------------------------------------------------------
 TILED_SERVER_API_KEY_VAR="TILED_BLUESKY_WRITING_API_KEY_${ENDSTATION^^}"
 TILED_SERVER_API_KEY="${!TILED_SERVER_API_KEY_VAR:-secret}"
 
-# Start the base docker container that will be where all of the configuration files and scripts will live ------------------------------------------------
-docker compose -f "${compose_file}" up -d base
+# Generate Certificates -------------------------------------------------------------
+mkdir -p "$certdir"
 
-# Grab the profile and clone it to a temporary directory so than it can be copied to docker
+if [ ! -f "$certdir/redis.crt" ]; then
+    echo "[hexsim] generating new Redis TLS certificate..."
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+        -keyout "$certdir/redis.key" \
+        -out "$certdir/redis.crt" \
+        -subj "/CN=${REDIS_HOST}" \
+        -addext "subjectAltName=DNS:${REDIS_HOST},DNS:localhost,DNS:hexsim-redis,IP:127.0.0.1"
+    chmod 644 "$certdir/redis.key" "$certdir/redis.crt"
+fi
+
+if [ ! -f "$certdir/tiled.crt" ]; then
+    echo "[hexsim] generating new tiled TLS certificate..."
+    openssl req -x509 -newkey rsa:2048 -sha256 -days 1 -nodes \
+        -keyout "$certdir/tiled.key" \
+        -out "$certdir/tiled.crt" \
+        -subj "/CN=tiled.nsls2.bnl.gov" \
+        -addext "subjectAltName=DNS:tiled.nsls2.bnl.gov,DNS:api.nsls2.bnl.gov,IP:127.0.0.1"
+    chmod 644 "$certdir/tiled.key" "$certdir/tiled.crt"
+fi
+
+# 2. START CONTAINERS (Now they boot with valid certs in place) ------------------------------------------------
+docker compose -f "${compose_file}" up -d --wait base redis
+
+docker exec hexsim-base sh -lc ': > /etc/bluesky/redis.secret'
+
+# Force refresh CA certs inside base to ensure redis.crt is loaded into system trust
+docker exec hexsim-base update-ca-certificates --fresh
+
+# Grab the profile and clone it to a temporary directory so than it can be copied to docker -------------------
 TMP_REPO="${root}/.beamline-repos/${BEAMLINE_REPO}"
 mkdir -p "${root}/.beamline-repos"
 
@@ -41,17 +70,15 @@ docker exec hexsim-base rm -rf "/workspace/${BEAMLINE_REPO}"
 docker exec hexsim-base mkdir -p "/workspace/${BEAMLINE_REPO}"
 docker cp "${TMP_REPO}/." "hexsim-base:/workspace/${BEAMLINE_REPO}/"
 
-
-# Build important tiled configuration files and copy them to the base docker container ---------------------------------------------------------------------
+# 4. Create more configuration for Tiled ---------------------------------------------------------------------
 tiled_profiles_dir="/etc/tiled/profiles"
-
 docker exec -it hexsim-base mkdir -p "$tiled_profiles_dir"
 
-# Builds the profile.yml
 LOCAL_TILED_URI="https://tiled.nsls2.bnl.gov/api/v1/metadata/${ENDSTATION}/raw"
 
+# Builds the profile.yml
 if [ -f "$post_data_security_file" ] && grep -qw "$ENDSTATION" "$post_data_security_file"; then
-        echo "Beamline ${ENDSTATION} is in post_data_security.txt, creating a direct profile for Tiled"
+    echo "Beamline ${ENDSTATION} is in post_data_security.txt, creating a direct profile for Tiled"
     cat <<EOF | docker exec -i hexsim-base sh -lc "cat > '$tiled_profiles_dir/profiles.yml'"
 ${ENDSTATION}:
     direct:
@@ -79,20 +106,13 @@ nsls2:
         Authorization: "Apikey ${TILED_SERVER_API_KEY}"
 EOF
 
-
-# Finish tiled setup
-echo "[base] Tiled config files created, now set up tiled"
+# Finish Tiled Setup -------------------------------------------------------------------------------------------
 export compose_file="${root}/compose/docker-compose.yml"
 export BEAMLINE_ACRONYM="${ENDSTATION}"
 export BEAMLINE_REPO="${BEAMLINE_REPO}"
-
 "$here/tiled.sh"
 
-
-# Builds and creates Redis files ----------------------------------------------------------------------------------------------------------------------
-# "$here/redis.sh"
-
-# Runs bsui.py interactively within the base docker container ----------------------------------------------------------------------------------------------------------------
+# Runs bsui.py interactively within the base docker container ---------------------------------------------------
 docker exec -it hexsim-base bash -lc "
 cd /workspace/${BEAMLINE_REPO}
 export BEAMLINE_ACRONYM=${ENDSTATION}
@@ -103,18 +123,3 @@ export TILED_SERVER_API_KEY=${TILED_SERVER_API_KEY}
 export TILED_API_KEY=${TILED_SERVER_API_KEY}
 pixi run -e terminal ipython --profile=test --pdb -i /workspace/scripts/bsui.py
 "
-
-
-# Extract important variables and save that to a file that will be in the directory, ex (endstation, redis-host)
-# in the same file set variables: This will be used throughout the run
-    # api keys
-    # redis host
-    # mongo host
-    # kafka host
-    # tiled host
-    # passwords & users
-
-# make any paths/files that are possible right now that are not already made and provide it to the base docker container
-
-# Start docker containers for the rest
-
