@@ -45,6 +45,10 @@ docker compose -f "${compose_file}" up -d --wait base redis
 
 docker exec hexsim-base sh -lc ': > /etc/bluesky/redis.secret'
 
+cat "${root}/configs/kafka.yml" | docker exec -i hexsim-base sh -lc "cat > /etc/bluesky/kafka.yml"
+
+docker cp "${root}/configs/pyOlog.conf" "hexsim-base:/root/.pyOlog.conf"
+
 # Force refresh CA certs inside base to ensure redis.crt is loaded into system trust
 docker exec hexsim-base update-ca-certificates --fresh
 
@@ -119,7 +123,8 @@ export BEAMLINE_ACRONYM=${ENDSTATION}
 export ENDSTATION_ACRONYM=${ENDSTATION}
 export TILED_BLUESKY_WRITING_API_KEY_${ENDSTATION^^}=secret
 export TILED_BLUESKY_WRITING_API_KEY=secret
-export TILED_SERVER_API_KEY=${TILED_SERVER_API_KEY} 
+export TILED_SERVER_API_KEY=${TILED_SERVER_API_KEY}
 export TILED_API_KEY=${TILED_SERVER_API_KEY}
 pixi run -e terminal ipython --profile=test --pdb -i /workspace/scripts/bsui.py
 "
+#export PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring

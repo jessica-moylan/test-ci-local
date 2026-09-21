@@ -1,0 +1,6 @@
+---
+abort_run_on_kafka_exception: false
+bootstrap_servers:
+  - 127.0.0.1:9092
+runengine_producer_config:
+  security.protocol: PLAINTEXT
