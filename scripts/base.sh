@@ -21,20 +21,26 @@ docker compose -f "${compose_file}" up -d base
 
 # Grab the profile and clone it to a temporary directory so than it can be copied to docker
 TMP_REPO="${root}/.beamline-repos/${BEAMLINE_REPO}"
-mkdir -p "${TMP_REPO}"
+mkdir -p "${root}/.beamline-repos"
+
+# Clone the beamline repo if it doesn't exist locally, otherwise update it
 if [ ! -d "${TMP_REPO}/.git" ]; then
+    echo "Cloning ${BEAMLINE_REPO} (${BEAMLINE_BRANCH})..."
     git clone --branch "${BEAMLINE_BRANCH}" --single-branch "https://github.com/NSLS2/${BEAMLINE_REPO}.git" "${TMP_REPO}"
-    docker cp "${TMP_REPO}" hexsim-base:/workspace/${BEAMLINE_REPO}
-    rm -rf "${TMP_REPO}"
+else
+    echo "Updating existing local repo ${BEAMLINE_REPO}..."
+    git -C "${TMP_REPO}" fetch origin
+    git -C "${TMP_REPO}" checkout "${BEAMLINE_BRANCH}"
+    git -C "${TMP_REPO}" pull origin "${BEAMLINE_BRANCH}"
 fi
 
-# Verify pixi is available in the base container.
-# docker exec -i hexsim-base sh -lc 'command -v pixi >/dev/null'
+# Sync local repo content into the hexsim-base (this will overwrite any existing content in the container's workspace)
+# This will be relvant if you make local changes to the beamline repo and want to test
+echo "Syncing ${BEAMLINE_REPO} to container workspace..."
+docker exec hexsim-base rm -rf "/workspace/${BEAMLINE_REPO}"
+docker exec hexsim-base mkdir -p "/workspace/${BEAMLINE_REPO}"
+docker cp "${TMP_REPO}/." "hexsim-base:/workspace/${BEAMLINE_REPO}/"
 
-# Build the pixi environment from the copied beamline repo so later docker exec
-# calls can reuse the persisted project environment.
-echo "here"
-docker exec -d hexsim-base sh -lc "cd '/workspace/hex-profile-collection' && [ -f pixi.toml ] && pixi install -e terminal"
 
 # Build important tiled configuration files and copy them to the base docker container ---------------------------------------------------------------------
 tiled_profiles_dir="/etc/tiled/profiles"
@@ -84,18 +90,19 @@ export BEAMLINE_REPO="${BEAMLINE_REPO}"
 
 
 # Builds and creates Redis files ----------------------------------------------------------------------------------------------------------------------
-
+# "$here/redis.sh"
 
 # Runs bsui.py interactively within the base docker container ----------------------------------------------------------------------------------------------------------------
-# docker exec -it hexsim-base bash -lc "
-# cd /workspace/${BEAMLINE_REPO}
-# export BEAMLINE_ACRONYM=${ENDSTATION}
-# export ENDSTATION_ACRONYM=${ENDSTATION}
-# export TILED_BLUESKY_WRITING_API_KEY_${ENDSTATION^^}=secret
-# export TILED_BLUESKY_WRITING_API_KEY=secret
-# export TILED_SERVER_API_KEY=secret
-# pixi run -e terminal ipython --profile=test --pdb -i /workspace/scripts/bsui.py
-# "
+docker exec -it hexsim-base bash -lc "
+cd /workspace/${BEAMLINE_REPO}
+export BEAMLINE_ACRONYM=${ENDSTATION}
+export ENDSTATION_ACRONYM=${ENDSTATION}
+export TILED_BLUESKY_WRITING_API_KEY_${ENDSTATION^^}=secret
+export TILED_BLUESKY_WRITING_API_KEY=secret
+export TILED_SERVER_API_KEY=${TILED_SERVER_API_KEY} 
+export TILED_API_KEY=${TILED_SERVER_API_KEY}
+pixi run -e terminal ipython --profile=test --pdb -i /workspace/scripts/bsui.py
+"
 
 
 # Extract important variables and save that to a file that will be in the directory, ex (endstation, redis-host)
