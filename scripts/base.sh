@@ -41,7 +41,7 @@ if [ ! -f "$certdir/tiled.crt" ]; then
 fi
 
 # 2. START CONTAINERS (Now they boot with valid certs in place) ------------------------------------------------
-docker compose -f "${compose_file}" up -d --wait base redis
+docker compose -f "${compose_file}" up -d --wait --build base redis
 
 docker exec hexsim-base sh -lc ': > /etc/bluesky/redis.secret'
 
@@ -116,9 +116,22 @@ export BEAMLINE_ACRONYM="${ENDSTATION}"
 export BEAMLINE_REPO="${BEAMLINE_REPO}"
 "$here/tiled.sh"
 
+docker cp "${root}/scripts/spoof_beamline.py" \
+    hexsim-base:/tmp/spoof_beamline.py
+
+docker exec -d hexsim-base sh -lc '
+    export EPICS_CA_AUTO_ADDR_LIST=NO
+    export EPICS_CA_ADDR_LIST=127.0.0.1
+
+    printf "\n" | python3 /tmp/spoof_beamline.py \
+        > /tmp/blackhole_ioc.log 2>&1
+'
+
 # Runs bsui.py interactively within the base docker container ---------------------------------------------------
 docker exec -it hexsim-base bash -lc "
 cd /workspace/${BEAMLINE_REPO}
+export EPICS_CA_AUTO_ADDR_LIST=NO
+export EPICS_CA_ADDR_LIST=127.0.0.1
 export BEAMLINE_ACRONYM=${ENDSTATION}
 export ENDSTATION_ACRONYM=${ENDSTATION}
 export TILED_BLUESKY_WRITING_API_KEY_${ENDSTATION^^}=secret
@@ -127,4 +140,3 @@ export TILED_SERVER_API_KEY=${TILED_SERVER_API_KEY}
 export TILED_API_KEY=${TILED_SERVER_API_KEY}
 pixi run -e terminal ipython --profile=test --pdb -i /workspace/scripts/bsui.py
 "
-#export PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring

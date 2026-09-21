@@ -3,3 +3,7 @@ This is written in attempt to duplicate [this GitHub](https://github.com/NSLS2/g
 To run: `scripts/base.sh <tla> <profile collection> <branch>` ex: `scripts/base.sh hex hex-profile-collection main`
 
 Docker is required
+
+
+Profiles this works with:
+- [x] CSX

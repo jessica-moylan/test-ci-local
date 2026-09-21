@@ -30,7 +30,7 @@ services:
     working_dir: /workspace
     stdin_open: true
     tty: true
-    command: sh -c "update-ca-certificates --fresh && exec tail -f /dev/null"
+    command: sh -lc "update-ca-certificates --fresh && printf '\n' | python /usr/local/bin/spoof_beamline.py >/tmp/spoof_beamline.log 2>&1 & exec tail -f /dev/null"
     tmpfs:
       - /etc/bluesky
       - /nsls2/data
