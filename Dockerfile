@@ -1,8 +1,13 @@
 FROM python:3.11-slim
 
-RUN apt-get update && apt-get install -y curl bash ca-certificates && \
-    curl -fsSL https://pixi.sh/install.sh | sh && \
-    mv /root/.pixi/bin/pixi /usr/local/bin/pixi
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    bash \
+    ca-certificates \
+    git \
+ && rm -rf /var/lib/apt/lists/* \
+ && curl -fsSL https://pixi.sh/install.sh | sh \
+ && mv /root/.pixi/bin/pixi /usr/local/bin/pixi
 
 RUN pip install --no-cache-dir -U caproto
 

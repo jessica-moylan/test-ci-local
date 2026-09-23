@@ -30,19 +30,20 @@ services:
     working_dir: /workspace
     stdin_open: true
     tty: true
+    environment:
+      ENDSTATION: ${ENDSTATION}
+      PYTHONPATH: /workspace
+      REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+      SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
     command: sh -lc "update-ca-certificates --fresh && printf '\n' | python /usr/local/bin/spoof_beamline.py >/tmp/spoof_beamline.log 2>&1 & exec tail -f /dev/null"
     tmpfs:
       - /etc/bluesky
       - /nsls2/data
     volumes:
-      - base_workspace:/workspace
+      # - base_workspace:/workspace
       - beamline_config:/app/.config/tiled:rw
       - caddy_data:/usr/local/share/ca-certificates/caddy:ro # Mount CA root
-      - ./certs/redis.crt:/usr/local/share/ca-certificates/redis.crt:ro
-    environment:
-      PYTHONPATH: /workspace
-      REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
-      SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+      - ./certs/redis-${ENDSTATION}.crt:/usr/local/share/ca-certificates/redis-${ENDSTATION}.crt:ro
 
   tiled:
     image: ghcr.io/bluesky/tiled:latest
@@ -64,6 +65,8 @@ services:
   redis:
     image: redis:7
     container_name: hexsim-redis
+    environment:
+      ENDSTATION: ${ENDSTATION}
     # New/secure NSLS-II redis machines use TLS on 6380 (6379 = old plaintext).
     # `--port 0` disables the plaintext port so only 6380/TLS is served.
     command:
@@ -73,11 +76,11 @@ services:
       - --tls-port
       - "6380"
       - --tls-cert-file
-      - /certs/redis.crt
+      - /certs/redis-${ENDSTATION}.crt
       - --tls-key-file
-      - /certs/redis.key
+      - /certs/redis-${ENDSTATION}.key
       - --tls-ca-cert-file
-      - /certs/redis.crt
+      - /certs/redis-${ENDSTATION}.crt
       - --tls-auth-clients
       - "no"
     ports:

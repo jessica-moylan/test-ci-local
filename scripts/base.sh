@@ -7,11 +7,13 @@ post_data_security_file="${root}/configs/post_data_security.txt"
 certdir="$root/compose/certs"
 
 ENDSTATION="${1:-hex}"
+export ENDSTATION
 BEAMLINE_REPO="${2:-hex-profile-collection}"
 echo "Using endstation: ${ENDSTATION}"
 echo "Using beamline repo: ${BEAMLINE_REPO}"
 BEAMLINE_BRANCH="${3:-main}"
 REDIS_HOST=$4
+echo "Using Redis host: ${REDIS_HOST}"
 
 # Variables ----------------------------------------------------------------------------------------------------
 TILED_SERVER_API_KEY_VAR="TILED_BLUESKY_WRITING_API_KEY_${ENDSTATION^^}"
@@ -20,30 +22,29 @@ TILED_SERVER_API_KEY="${!TILED_SERVER_API_KEY_VAR:-secret}"
 # Generate Certificates -------------------------------------------------------------
 mkdir -p "$certdir"
 
-if [ ! -f "$certdir/redis.crt" ]; then
-    echo "[hexsim] generating new Redis TLS certificate..."
-    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-        -keyout "$certdir/redis.key" \
-        -out "$certdir/redis.crt" \
-        -subj "/CN=${REDIS_HOST}" \
-        -addext "subjectAltName=DNS:${REDIS_HOST},DNS:localhost,DNS:hexsim-redis,IP:127.0.0.1"
-    chmod 644 "$certdir/redis.key" "$certdir/redis.crt"
+echo "[hexsim] generating new Redis TLS certificate..."
+if [ ! -f "$certdir/redis-${ENDSTATION}.crt" ]; then
+  openssl req -x509 -nodes -days 1 -newkey rsa:2048 \
+    -keyout "$certdir/redis-${ENDSTATION}.key" \
+    -out "$certdir/redis-${ENDSTATION}.crt" \
+    -subj "/CN=${REDIS_HOST}" \
+    -addext "subjectAltName=DNS:${REDIS_HOST},DNS:localhost,DNS:hexsim-redis,IP:127.0.0.1"
 fi
+chmod 644 "$certdir/redis-${ENDSTATION}.key" "$certdir/redis-${ENDSTATION}.crt"
 
-if [ ! -f "$certdir/tiled.crt" ]; then
-    echo "[hexsim] generating new tiled TLS certificate..."
-    openssl req -x509 -newkey rsa:2048 -sha256 -days 1 -nodes \
-        -keyout "$certdir/tiled.key" \
-        -out "$certdir/tiled.crt" \
-        -subj "/CN=tiled.nsls2.bnl.gov" \
-        -addext "subjectAltName=DNS:tiled.nsls2.bnl.gov,DNS:api.nsls2.bnl.gov,IP:127.0.0.1"
-    chmod 644 "$certdir/tiled.key" "$certdir/tiled.crt"
-fi
+echo "[hexsim] generating new tiled TLS certificate..."
+openssl req -x509 -newkey rsa:2048 -sha256 -days 1 -nodes \
+    -keyout "$certdir/tiled.key" \
+    -out "$certdir/tiled.crt" \
+    -subj "/CN=tiled.nsls2.bnl.gov" \
+    -addext "subjectAltName=DNS:tiled.nsls2.bnl.gov,DNS:api.nsls2.bnl.gov,IP:127.0.0.1"
+chmod 644 "$certdir/tiled.key" "$certdir/tiled.crt"
 
 # 2. START CONTAINERS (Now they boot with valid certs in place) ------------------------------------------------
 docker compose -f "${compose_file}" up -d --wait --build base redis
 
 docker exec hexsim-base sh -lc ': > /etc/bluesky/redis.secret'
+docker exec -it --user root hexsim-base bash -c "echo '172.18.0.2 ${REDIS_HOST}' >> /etc/hosts"
 
 cat "${root}/configs/kafka.yml" | docker exec -i hexsim-base sh -lc "cat > /etc/bluesky/kafka.yml"
 
