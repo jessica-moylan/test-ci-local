@@ -40,10 +40,9 @@ services:
       - /etc/bluesky
       - /nsls2/data
     volumes:
-      # - base_workspace:/workspace
       - beamline_config:/app/.config/tiled:rw
       - caddy_data:/usr/local/share/ca-certificates/caddy:ro # Mount CA root
-      - ./certs/redis-${ENDSTATION}.crt:/usr/local/share/ca-certificates/redis-${ENDSTATION}.crt:ro
+      - ./certs:/usr/local/share/ca-certificates/redis-${ENDSTATION}.crt:ro
 
   tiled:
     image: ghcr.io/bluesky/tiled:latest

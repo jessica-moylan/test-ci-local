@@ -12,8 +12,48 @@ BEAMLINE_REPO="${2:-hex-profile-collection}"
 echo "Using endstation: ${ENDSTATION}"
 echo "Using beamline repo: ${BEAMLINE_REPO}"
 BEAMLINE_BRANCH="${3:-main}"
-REDIS_HOST=$4
-echo "Using Redis host: ${REDIS_HOST}"
+
+declare -A redis_host
+
+redis_host[six]="xf02id1-six-redis1.nsls2.bnl.gov"
+redis_host[hxn]="xf03id1-hxn-redis1.nsls2.bnl.gov"
+redis_host[maia]="xf04bm-maia-redis1.nsls2.bnl.gov"
+redis_host[xfm]="xf04bm-xfm-redis1.nsls2.bnl.gov"
+redis_host[isr]="xf04id1-isr-redis1.nsls2.bnl.gov"
+redis_host[srx]="xf05id2-srx-redis1.nsls2.bnl.gov"
+redis_host[bmm]="xf06bm-bmm-redis1.nsls2.bnl.gov"
+redis_host[qas]="xf07bm-qas-redis1.nsls2.bnl.gov"
+redis_host[haxpes]="xf07id1-haxpes-redis1.nsls2.bnl.gov"
+redis_host[nexafs]="xf07id1-nexafs-redis1.nsls2.bnl.gov"
+redis_host[rsoxs]="xf07id1-rsoxs-redis1.nsls2.bnl.gov"
+redis_host[ucal]="xf07id1-ucal-redis1.nsls2.bnl.gov"
+redis_host[tes]="xf08bm-tes-redis1.nsls2.bnl.gov"
+redis_host[iss]="xf08id1-iss-redis1.nsls2.bnl.gov"
+redis_host[cdi]="xf09id1-cdi-redis1.nsls2.bnl.gov"
+redis_host[ixs]="xf10id1-ixs-redis1.nsls2.bnl.gov"
+redis_host[chx]="xf11id1-chx-redis1.nsls2.bnl.gov"
+redis_host[cms]="xf11bm-cms-redis1.nsls2.bnl.gov"
+redis_host[opls]="xf12id1-opls-redis1.nsls2.bnl.gov"
+redis_host[smi]="xf12id2-smi-redis1.nsls2.bnl.gov"
+redis_host[lix]="xf16id1-lix-redis1.nsls2.bnl.gov"
+redis_host[xfp]="xf17bm-xfp-redis1.nsls2.bnl.gov"
+redis_host[amx]="xf17id1-amx-redis1.nsls2.bnl.gov"
+redis_host[fmx]="xf17id2-fmx-redis1.nsls2.bnl.gov"
+redis_host[fxi]="xf18id1-fxi-redis1.nsls2.bnl.gov"
+redis_host[nyx]="xf19id2-nyx-redis1.nsls2.bnl.gov"
+redis_host[arpes]="xf21id1-arpes-redis1.nsls2.bnl.gov"
+redis_host[xpeem]="xf21id1-xpeem-redis1.nsls2.bnl.gov"
+redis_host[csx]="xf23id1-csx-redis1.nsls2.bnl.gov"
+redis_host[ios]="xf23id2-ios-redis1.nsls2.bnl.gov"
+redis_host[hex]="xf27id1-hex-redis1.nsls2.bnl.gov"
+redis_host[pdf]="xf28id1-pdf-redis1.nsls2.bnl.gov"
+redis_host[xpd]="xf28id2-xpd-redis1.nsls2.bnl.gov"
+redis_host[xpdd]="xf28id2-xpdd-redis1.nsls2.bnl.gov"
+redis_host[tst]="xf31id1-tst-redis1.nsls2.bnl.gov"
+
+
+REDIS_HOST=${redis_host[$ENDSTATION]}
+
 
 # Variables ----------------------------------------------------------------------------------------------------
 TILED_SERVER_API_KEY_VAR="TILED_BLUESKY_WRITING_API_KEY_${ENDSTATION^^}"
@@ -90,11 +130,11 @@ ${ENDSTATION}:
         authentication:
             allow_anonymous_access: true
         trees:
-            - tree: databroker.mongo_normalized:Tree.from_uri
-                path: /
-                args:
-                    uri: mongodb://localhost:27017/metadatastore-local
-                    asset_registry_uri: mongodb://localhost:27017/asset-registry-local
+          - tree: databroker.mongo_normalized:Tree.from_uri
+            path: /
+            args:
+              uri: mongodb://localhost:27017/metadatastore-local
+              asset_registry_uri: mongodb://localhost:27017/asset-registry-local
 EOF
 else
     cat <<EOF | docker exec -i hexsim-base sh -lc "cat > '$tiled_profiles_dir/profiles.yml'"
