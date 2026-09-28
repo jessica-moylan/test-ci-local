@@ -1,5 +1,7 @@
 FROM python:3.11-slim
 
+ARG ENDSTATION
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     bash \
@@ -18,6 +20,12 @@ COPY scripts/spoof_beamline.py /usr/local/bin/spoof_beamline.py
 
 WORKDIR /workspace
 COPY . /workspace
+
+# Bemaline specific configuration
+
+# FMX
+RUN mkdir -p /nsls2/data/${ENDSTATION}/shared/config/bluesky/logs
+RUN touch /nsls2/data/${ENDSTATION}/shared/config/bluesky/logs/startup_log.log
 
 CMD ["python", "/usr/local/bin/spoof_beamline.py"]
 

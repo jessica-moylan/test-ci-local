@@ -81,10 +81,16 @@ openssl req -x509 -newkey rsa:2048 -sha256 -days 1 -nodes \
 chmod 644 "$certdir/tiled.key" "$certdir/tiled.crt"
 
 # 2. START CONTAINERS (Now they boot with valid certs in place) ------------------------------------------------
-docker compose -f "${compose_file}" up -d --wait --build base redis
+docker compose -f "${compose_file}" up -d --wait --build base redis mongo
 
 docker exec hexsim-base sh -lc ': > /etc/bluesky/redis.secret'
 docker exec -it --user root hexsim-base bash -c "echo '172.18.0.2 ${REDIS_HOST}' >> /etc/hosts"
+docker exec -it --user root hexsim-base bash -lc '
+    for i in 1 2 3; do
+        echo "127.0.0.1 mongo${i}.nsls2.bnl.gov" >> /etc/hosts
+    done
+'
+
 
 cat "${root}/configs/kafka.yml" | docker exec -i hexsim-base sh -lc "cat > /etc/bluesky/kafka.yml"
 
@@ -133,8 +139,8 @@ ${ENDSTATION}:
           - tree: databroker.mongo_normalized:Tree.from_uri
             path: /
             args:
-              uri: mongodb://localhost:27017/metadatastore-local
-              asset_registry_uri: mongodb://localhost:27017/asset-registry-local
+              uri: mongodb://hexsim-mongo:27017/metadatastore-local
+              asset_registry_uri: mongodb://hexsim-mongo:27017/asset-registry-local
 EOF
 else
     cat <<EOF | docker exec -i hexsim-base sh -lc "cat > '$tiled_profiles_dir/profiles.yml'"
