@@ -3,3 +3,47 @@ This is written in attempt to duplicate [this GitHub](https://github.com/NSLS2/g
 To run: `scripts/base.sh <tla> <profile collection> <branch>` ex: `scripts/base.sh hex hex-profile-collection main`
 
 Docker is required
+
+Working Profiles as of Sep 28
+A few beamlines had to be run using my branches due to needed updates/modernizing (noted by bold)
+
+Progress on beamlines:
+- [ ] chx - pulls repos from local (https://github.com/NSLS2/chx-profile-collection/blob/b2555d5cdabb3be5e725a0d28438a9ca202ce02c/startup/01-chxsetup.py#L25)
+- [ ] cms 
+- [x] csx
+- [x] fmx - uses pixi_2026C2 branch
+- [ ] fxi - calib_new.csv (need to understand formatting)
+- [x] hex - kafka errors (but non blocking)
+- [ ] hxn - invalid DISPLAY variable
+- [x] ios
+---- NOT TESTED YET (copied directly from [this GitHub](https://github.com/NSLS2/gha-beamline-integration-test) ) -----
+- [ ] **isr: needed LICENSE**
+- [ ] iss - pulls git repos locally (https://github.com/NSLS2/iss-profile-collection/blob/b2c6b292c51ec4983d041165aff6b6ce641bd13a/pixi.toml#L51)
+- [ ] **ixs: needed LICENSE**
+- [ ] lix
+- [ ] **nyx: needed to remove/comment out bl-specific.sh**
+- [ ] opls
+- [ ] pdf - AttributeError: 'CatalogOfBlueskyRuns' object has no attribute 'insert'
+- [ ] qas - pulls git repos locally (https://github.com/NSLS2/qas-profile-collection/blob/c72294ff5d1e3726debfe4d97ede355a922de39e/pixi.toml#L39)
+- [ ] six (needs to be double checked once Tiled issue 1417 is within the version the profile uses
+- [ ] sml
+- [ ] srx
+- [ ] tes - pixi_2026C2 needs to be pushed to master
+- [ ] tst
+- [ ] xfm - pixi_2026C2 needs to be pushed to master, as well as adding a LICENSE file and missing `scikit-beam` dependency
+- [ ] xfm-maia
+- [ ] xfp
+- [ ] xpd 
+- [ ] xpdd
+************** COMPLETED AT A LATER DATE ***************
+- [ ] amx
+- [ ] cdi
+************** OTHER ********************************************
+- [ ] bmm (already has a testing suite)
+************** NOT CURRENTLY PLANNED *******************
+- [ ] arpes
+- [ ] xpeem
+- [ ] haxpes
+- [ ] nexafs
+- [ ] rsoxs
+- [ ] vppem

@@ -40,7 +40,6 @@ services:
     command: sh -lc "update-ca-certificates --fresh && printf '\n' | python /usr/local/bin/spoof_beamline.py >/tmp/spoof_beamline.log 2>&1 & exec tail -f /dev/null"
     tmpfs:
       - /etc/bluesky
-      # - /nsls2/data
     volumes:
       - beamline_config:/app/.config/tiled:rw
       - caddy_data:/usr/local/share/ca-certificates/caddy:ro # Mount CA root
