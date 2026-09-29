@@ -1,8 +1,8 @@
 FROM python:3.11-slim
 
-ARG ENDSTATION
-
+# sudo is required for paths that are created within the profile collections
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    sudo \
     curl \
     bash \
     ca-certificates \
@@ -16,16 +16,18 @@ RUN pip install --no-cache-dir -U caproto
 ENV EPICS_CA_AUTO_ADDR_LIST=NO
 ENV EPICS_CA_ADDR_LIST=127.0.0.1:5064
 
+ARG ENDSTATION
+ENV ENDSTATION=${ENDSTATION}
+
 COPY scripts/spoof_beamline.py /usr/local/bin/spoof_beamline.py
 
 WORKDIR /workspace
 COPY . /workspace
 
-# Bemaline specific configuration
+# Bemaline specific configuration using entrypoint script
+COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# FMX
-RUN mkdir -p /nsls2/data/${ENDSTATION}/shared/config/bluesky/logs
-RUN touch /nsls2/data/${ENDSTATION}/shared/config/bluesky/logs/startup_log.log
-
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["python", "/usr/local/bin/spoof_beamline.py"]
 

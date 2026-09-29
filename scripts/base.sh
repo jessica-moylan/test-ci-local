@@ -90,8 +90,6 @@ docker exec -it --user root hexsim-base bash -lc '
         echo "127.0.0.1 mongo${i}.nsls2.bnl.gov" >> /etc/hosts
     done
 '
-
-
 cat "${root}/configs/kafka.yml" | docker exec -i hexsim-base sh -lc "cat > /etc/bluesky/kafka.yml"
 
 docker cp "${root}/configs/pyOlog.conf" "hexsim-base:/root/.pyOlog.conf"
@@ -120,6 +118,12 @@ echo "Syncing ${BEAMLINE_REPO} to container workspace..."
 docker exec hexsim-base rm -rf "/workspace/${BEAMLINE_REPO}"
 docker exec hexsim-base mkdir -p "/workspace/${BEAMLINE_REPO}"
 docker cp "${TMP_REPO}/." "hexsim-base:/workspace/${BEAMLINE_REPO}/"
+
+# Required scripts for the beamline setup --------------------------------------------------------------------
+if [[ "${ENDSTATION}" =~ ^(fxi)$ ]]; then
+    echo "Running beamline-specific setup for ${ENDSTATION}..."
+    docker exec hexsim-base bash -lc "cd /workspace/${BEAMLINE_REPO} && source .ci/bl-specific.sh"
+fi
 
 # 4. Create more configuration for Tiled ---------------------------------------------------------------------
 tiled_profiles_dir="/etc/tiled/profiles"

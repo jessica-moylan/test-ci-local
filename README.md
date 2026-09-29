@@ -12,7 +12,7 @@ Progress on beamlines:
 - [ ] cms 
 - [x] csx
 - [x] fmx - uses pixi_2026C2 branch
-- [ ] fxi - calib_new.csv (need to understand formatting)
+- [x] fxi 
 - [x] hex - kafka errors (but non blocking)
 - [ ] hxn - invalid DISPLAY variable
 - [x] ios
