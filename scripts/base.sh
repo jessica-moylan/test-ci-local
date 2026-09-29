@@ -63,13 +63,11 @@ TILED_SERVER_API_KEY="${!TILED_SERVER_API_KEY_VAR:-secret}"
 mkdir -p "$certdir"
 
 echo "[hexsim] generating new Redis TLS certificate..."
-if [ ! -f "$certdir/redis-${ENDSTATION}.crt" ]; then
-  openssl req -x509 -nodes -days 1 -newkey rsa:2048 \
+openssl req -x509 -nodes -days 1 -newkey rsa:2048 \
     -keyout "$certdir/redis-${ENDSTATION}.key" \
     -out "$certdir/redis-${ENDSTATION}.crt" \
     -subj "/CN=${REDIS_HOST}" \
     -addext "subjectAltName=DNS:${REDIS_HOST},DNS:localhost,DNS:hexsim-redis,IP:127.0.0.1"
-fi
 chmod 644 "$certdir/redis-${ENDSTATION}.key" "$certdir/redis-${ENDSTATION}.crt"
 
 echo "[hexsim] generating new tiled TLS certificate..."
@@ -84,7 +82,9 @@ chmod 644 "$certdir/tiled.key" "$certdir/tiled.crt"
 docker compose -f "${compose_file}" up -d --wait --build base redis mongo
 
 docker exec hexsim-base sh -lc ': > /etc/bluesky/redis.secret'
-docker exec -it --user root hexsim-base bash -c "echo '172.18.0.2 ${REDIS_HOST}' >> /etc/hosts"
+
+REDIS_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' hexsim-redis)
+docker exec -it --user root hexsim-base bash -c "echo '${REDIS_IP} ${REDIS_HOST}' >> /etc/hosts"
 docker exec -it --user root hexsim-base bash -lc '
     for i in 1 2 3; do
         echo "127.0.0.1 mongo${i}.nsls2.bnl.gov" >> /etc/hosts
