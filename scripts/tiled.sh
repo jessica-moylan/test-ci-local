@@ -52,4 +52,3 @@ if tla == "opls":
         metadata={"proposal_number": 123456, "main_proposer": "test_user"}
     )
 PY'
-echo "finish"

@@ -7,6 +7,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
     ca-certificates \
     git \
+    build-essential \
+    redis-tools \
+    xvfb \
  && rm -rf /var/lib/apt/lists/* \
  && curl -fsSL https://pixi.sh/install.sh | sh \
  && mv /root/.pixi/bin/pixi /usr/local/bin/pixi

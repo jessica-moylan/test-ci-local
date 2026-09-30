@@ -179,10 +179,24 @@ docker exec -d hexsim-base sh -lc '
 '
 
 # Runs bsui.py interactively within the base docker container ---------------------------------------------------
+
+# TODO: Is there a better way of dealing with all of these export statement through a .env file?
 docker exec -it hexsim-base bash -lc "
 cd /workspace/${BEAMLINE_REPO}
-export EPICS_CA_AUTO_ADDR_LIST=NO
-export EPICS_CA_ADDR_LIST=127.0.0.1
+if [[ ! -e /tmp/.X99-lock ]]; then
+    Xvfb :99 -ac -screen 0 1280x1024x16 >/tmp/xvfb.log 2>&1 &
+fi
+export DISPLAY=:99
+export MPLBACKEND=Agg
+export QT_QPA_PLATFORM=offscreen
+export PYTHONFAULTHANDLER=1
+export LIBGL_ALWAYS_SOFTWARE=1
+export QTWEBENGINE_DISABLE_SANDBOX=1
+export OMP_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export BLUESKY_KAFKA_BOOTSTRAP_SERVERS=127.0.0.1:9092
+export BLUESKY_KAFKA_PASSWORD=test
 export BEAMLINE_ACRONYM=${ENDSTATION}
 export ENDSTATION_ACRONYM=${ENDSTATION}
 export TILED_BLUESKY_WRITING_API_KEY_${ENDSTATION^^}=secret

@@ -14,11 +14,13 @@ Progress on beamlines:
 - [x] fmx - uses pixi_2026C2 branch
 - [x] fxi 
 - [x] hex - kafka errors (but non blocking)
-- [ ] hxn - invalid DISPLAY variable
+- [ ] hxn - need to fix pathing
 - [x] ios
----- NOT TESTED YET (copied directly from [this GitHub](https://github.com/NSLS2/gha-beamline-integration-test) ) -----
-- [ ] **isr: needed LICENSE**
+- [x] **isr: needed LICENSE**
 - [ ] iss - pulls git repos locally (https://github.com/NSLS2/iss-profile-collection/blob/b2c6b292c51ec4983d041165aff6b6ce641bd13a/pixi.toml#L51)
+
+---- NOT TESTED YET (copied directly from [this GitHub](https://github.com/NSLS2/gha-beamline-integration-test) ) -----
+
 - [ ] **ixs: needed LICENSE**
 - [ ] lix
 - [ ] **nyx: needed to remove/comment out bl-specific.sh**
