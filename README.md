@@ -18,13 +18,10 @@ Progress on beamlines:
 - [x] ios
 - [x] **isr: needed LICENSE**
 - [ ] iss - pulls git repos locally (https://github.com/NSLS2/iss-profile-collection/blob/b2c6b292c51ec4983d041165aff6b6ce641bd13a/pixi.toml#L51)
-
----- NOT TESTED YET (copied directly from [this GitHub](https://github.com/NSLS2/gha-beamline-integration-test) ) -----
-
-- [ ] **ixs: needed LICENSE**
+- [x] **ixs: needed LICENSE**
 - [ ] lix
-- [ ] **nyx: needed to remove/comment out bl-specific.sh**
-- [ ] opls
+- [x] nyx
+- [x] opls
 - [ ] pdf - AttributeError: 'CatalogOfBlueskyRuns' object has no attribute 'insert'
 - [ ] qas - pulls git repos locally (https://github.com/NSLS2/qas-profile-collection/blob/c72294ff5d1e3726debfe4d97ede355a922de39e/pixi.toml#L39)
 - [ ] six (needs to be double checked once Tiled issue 1417 is within the version the profile uses

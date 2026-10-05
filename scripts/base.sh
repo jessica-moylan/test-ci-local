@@ -9,8 +9,6 @@ certdir="$root/compose/certs"
 ENDSTATION="${1:-hex}"
 export ENDSTATION
 BEAMLINE_REPO="${2:-hex-profile-collection}"
-echo "Using endstation: ${ENDSTATION}"
-echo "Using beamline repo: ${BEAMLINE_REPO}"
 BEAMLINE_BRANCH="${3:-main}"
 
 declare -A redis_host
@@ -58,6 +56,8 @@ REDIS_HOST=${redis_host[$ENDSTATION]}
 # Variables ----------------------------------------------------------------------------------------------------
 TILED_SERVER_API_KEY_VAR="TILED_BLUESKY_WRITING_API_KEY_${ENDSTATION^^}"
 TILED_SERVER_API_KEY="${!TILED_SERVER_API_KEY_VAR:-secret}"
+profile_location="/nsls2/data/${ENDSTATION}/shared/config/bluesky/profile_collection"
+export profile_location="${profile_location}"
 
 # Generate Certificates -------------------------------------------------------------
 mkdir -p "$certdir"
@@ -84,12 +84,16 @@ docker compose -f "${compose_file}" up -d --wait --build base redis mongo
 docker exec hexsim-base sh -lc ': > /etc/bluesky/redis.secret'
 
 REDIS_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' hexsim-redis)
+HOST_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' hexsim-base)
+echo "[hexsim] Redis IP address: ${REDIS_IP}"
+echo "[hexsim] Host IP address: ${HOST_IP}"
+
 docker exec -it --user root hexsim-base bash -c "echo '${REDIS_IP} ${REDIS_HOST}' >> /etc/hosts"
 docker exec -it --user root hexsim-base bash -lc '
     for i in 1 2 3; do
         echo "127.0.0.1 mongo${i}.nsls2.bnl.gov" >> /etc/hosts
     done
-'
+# '
 cat "${root}/configs/kafka.yml" | docker exec -i hexsim-base sh -lc "cat > /etc/bluesky/kafka.yml"
 
 docker cp "${root}/configs/pyOlog.conf" "hexsim-base:/root/.pyOlog.conf"
@@ -115,15 +119,29 @@ fi
 # Sync local repo content into the hexsim-base (this will overwrite any existing content in the container's workspace)
 # This will be relvant if you make local changes to the beamline repo and want to test
 echo "Syncing ${BEAMLINE_REPO} to container workspace..."
-docker exec hexsim-base rm -rf "/workspace/${BEAMLINE_REPO}"
-docker exec hexsim-base mkdir -p "/workspace/${BEAMLINE_REPO}"
-docker cp "${TMP_REPO}/." "hexsim-base:/workspace/${BEAMLINE_REPO}/"
+# docker exec hexsim-base rm -rf "${profile_location}"
+docker exec hexsim-base mkdir -p "${profile_location}"
+docker cp "${TMP_REPO}/." "hexsim-base:${profile_location}/"
 
 # Required scripts for the beamline setup --------------------------------------------------------------------
 if [[ "${ENDSTATION}" =~ ^(fxi)$ ]]; then
     echo "Running beamline-specific setup for ${ENDSTATION}..."
-    docker exec hexsim-base bash -lc "cd /workspace/${BEAMLINE_REPO} && source .ci/bl-specific.sh"
+    docker exec hexsim-base bash -lc "cd ${profile_location} && source .ci/bl-specific.sh"
 fi
+
+docker exec -it hexsim-base mkdir -v -p /nsls2/data/${ENDSTATION}/legacy
+
+# OPLS soecific
+if [[ "${ENDSTATION}" = "opls" ]]; then
+    docker cp "${root}/configs/opls_attenuators_database.csv" "hexsim-base:/tmp/opls_attenuators_database.csv"
+    docker exec -it hexsim-base mkdir -p "/nsls2/data/smi/opls/shared/config/operations/bsui_parameters/attenuators/"
+    docker exec -it hexsim-base cp "/tmp/opls_attenuators_database.csv" "/nsls2/data/smi/opls/shared/config/operations/bsui_parameters/attenuators/"
+    docker exec -it hexsim-base mkdir -p "/root/.ipython/profile_test/"
+    docker exec -it hexsim-base cp "${profile_location}/OPLS_attenuator_thickness.csv" "/root/.ipython/profile_test/OPLS_attenuator_thickness.csv"
+fi
+
+docker exec hexsim-base redis-cli -h hexsim-redis -p 6380 --tls --insecure set "cycle" '"2025-2"'
+docker exec hexsim-base redis-cli -h hexsim-redis -p 6380 --tls --insecure set "data_session" '"pass-000000"'
 
 # 4. Create more configuration for Tiled ---------------------------------------------------------------------
 tiled_profiles_dir="/etc/tiled/profiles"
@@ -182,7 +200,7 @@ docker exec -d hexsim-base sh -lc '
 
 # TODO: Is there a better way of dealing with all of these export statement through a .env file?
 docker exec -it hexsim-base bash -lc "
-cd /workspace/${BEAMLINE_REPO}
+cd ${profile_location}
 if [[ ! -e /tmp/.X99-lock ]]; then
     Xvfb :99 -ac -screen 0 1280x1024x16 >/tmp/xvfb.log 2>&1 &
 fi
@@ -203,5 +221,12 @@ export TILED_BLUESKY_WRITING_API_KEY_${ENDSTATION^^}=secret
 export TILED_BLUESKY_WRITING_API_KEY=secret
 export TILED_SERVER_API_KEY=${TILED_SERVER_API_KEY}
 export TILED_API_KEY=${TILED_SERVER_API_KEY}
-pixi run -e terminal ipython --profile=test --pdb -i /workspace/scripts/bsui.py
+pixi run -e terminal ipython --profile=test --pdb -i ${profile_location}/scripts/bsui.py
 "
+
+wait
+
+docker compose -f "${compose_file}" down
+
+
+exit 0

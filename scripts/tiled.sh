@@ -3,16 +3,18 @@ set -euo pipefail
 
 compose_file="${compose_file:-$PWD/compose/docker-compose.yml}"
 BEAMLINE_ACRONYM="${BEAMLINE_ACRONYM:-hex}"
-BEAMLINE_REPO="${BEAMLINE_REPO:-hex-profile-collection}"
+BEAMLINE_REPO="${BEAMLINE_REPO}"
+profile_location="${profile_location}"
 
 docker compose -f "${compose_file}" up -d base tiled caddy
 
 # Run the bootstrap client from the base workspace container.
 docker compose -f "${compose_file}" exec -T \
-  -e TILED_SERVER_API_KEY="${TILED_SERVER_API_KEY:-secret}" \
-  -e BEAMLINE_ACRONYM="${BEAMLINE_ACRONYM}" \
+    -e TILED_SERVER_API_KEY="${TILED_SERVER_API_KEY:-secret}" \
+    -e BEAMLINE_ACRONYM="${BEAMLINE_ACRONYM}" \
     -e BEAMLINE_REPO="${BEAMLINE_REPO}" \
-    base bash -lc 'cd "/workspace/${BEAMLINE_REPO}" && pixi run -e terminal python - <<"PY"
+    -e profile_location="${profile_location}" \
+    base bash -lc 'cd "${profile_location}" && pixi run -e terminal python - <<"PY"
 import os
 import urllib3
 

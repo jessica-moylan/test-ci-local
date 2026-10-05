@@ -27,14 +27,15 @@ services:
       dockerfile: Dockerfile
       args:
         - ENDSTATION=${ENDSTATION}
+        - profile_location=${profile_location}
     image: hexsim-base:local
     container_name: hexsim-base
-    working_dir: /workspace
+    working_dir: ${profile_location}
     stdin_open: true
     tty: true
     environment:
       ENDSTATION: ${ENDSTATION}
-      PYTHONPATH: /workspace
+      PYTHONPATH: ${profile_location}
       REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
       SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
     command: sh -lc "update-ca-certificates --fresh && printf '\n' | python /usr/local/bin/spoof_beamline.py >/tmp/spoof_beamline.log 2>&1 & exec tail -f /dev/null"

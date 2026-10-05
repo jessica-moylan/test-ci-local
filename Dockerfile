@@ -1,5 +1,6 @@
 FROM python:3.11-slim
 
+# Try making the docker image be REHL based
 # sudo is required for paths that are created within the profile collections
 RUN apt-get update && apt-get install -y --no-install-recommends \
     sudo \
@@ -22,10 +23,13 @@ ENV EPICS_CA_ADDR_LIST=127.0.0.1:5064
 ARG ENDSTATION
 ENV ENDSTATION=${ENDSTATION}
 
+ARG profile_location
+ENV profile_location=${profile_location}
+
 COPY scripts/spoof_beamline.py /usr/local/bin/spoof_beamline.py
 
-WORKDIR /workspace
-COPY . /workspace
+WORKDIR ${profile_location}
+COPY . ${profile_location}
 
 # Bemaline specific configuration using entrypoint script
 COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
