@@ -4,7 +4,7 @@ To run: `scripts/base.sh <tla> <profile collection> <branch>` ex: `scripts/base.
 
 Docker is required
 
-Working Profiles as of Sep 28
+Working Profiles as of Oct 7
 A few beamlines had to be run using my branches due to needed updates/modernizing (noted by bold)
 
 Progress on beamlines:
@@ -24,9 +24,9 @@ Progress on beamlines:
 - [x] opls
 - [ ] pdf - AttributeError: 'CatalogOfBlueskyRuns' object has no attribute 'insert'
 - [ ] qas - pulls git repos locally (https://github.com/NSLS2/qas-profile-collection/blob/c72294ff5d1e3726debfe4d97ede355a922de39e/pixi.toml#L39)
-- [ ] six (needs to be double checked once Tiled issue 1417 is within the version the profile uses
-- [ ] sml
-- [ ] srx
+- [x] six 
+- [ ] sml ??? unclear 
+- [x] srx
 - [ ] tes - pixi_2026C2 needs to be pushed to master
 - [ ] tst
 - [ ] xfm - pixi_2026C2 needs to be pushed to master, as well as adding a LICENSE file and missing `scikit-beam` dependency

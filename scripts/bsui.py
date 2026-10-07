@@ -32,9 +32,9 @@ try:
     import platform
     import subprocess
     import yaml
-    import os
+    import datetime
     import xpdacq
-    from xpdacq.xpdacq_conf import _load_beamline_config
+    import xpdacq.xpdacq_conf
 
     def _ci_load_beamline_config(beamline_config_fp, verif='', test=False):
         if (not test) and (not os.path.isfile(beamline_config_fp)):
@@ -105,6 +105,15 @@ for f in startup_files:
             content = content.replace('RUNNING_IN_NSLS2_CI = False', 'RUNNING_IN_NSLS2_CI = True')
             
             with open(f, 'w') as file:
+                file.write(content)
+
+            ip.parent._exec_file(f)
+        elif f.endswith('94-load.py') and beamline_acronym == 'pdf':
+            with open(f, "r") as file:
+                content = file.read()
+    
+            content = content.replace('glbl[\'blconfig_path\']', 'glbl[\'blconfig_path\'], test = True')
+            with open(f, "w") as file:
                 file.write(content)
 
             ip.parent._exec_file(f)

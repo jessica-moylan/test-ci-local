@@ -136,8 +136,13 @@ if [[ "${ENDSTATION}" = "opls" ]]; then
     docker cp "${root}/configs/opls_attenuators_database.csv" "hexsim-base:/tmp/opls_attenuators_database.csv"
     docker exec -it hexsim-base mkdir -p "/nsls2/data/smi/opls/shared/config/operations/bsui_parameters/attenuators/"
     docker exec -it hexsim-base cp "/tmp/opls_attenuators_database.csv" "/nsls2/data/smi/opls/shared/config/operations/bsui_parameters/attenuators/"
-    docker exec -it hexsim-base mkdir -p "/root/.ipython/profile_test/"
-    docker exec -it hexsim-base cp "${profile_location}/OPLS_attenuator_thickness.csv" "/root/.ipython/profile_test/OPLS_attenuator_thickness.csv"
+fi
+
+if [[ "${ENDSTATION}" = "srx" ]]; then
+    export LOGS_HOME="/home/xf05id1"
+    docker exec -it hexsim-base mkdir -v -p /home/xf05id1/
+    docker exec -it hexsim-base chown -v --reference=/nsls2/ /home/xf05id1/
+    docker exec -it hexsim-base mkdir -v -p /home/xf05id1/.cache/bluesky/log/
 fi
 
 docker exec hexsim-base redis-cli -h hexsim-redis -p 6380 --tls --insecure set "cycle" '"2025-2"'
@@ -195,6 +200,11 @@ docker exec -d hexsim-base sh -lc '
     printf "\n" | python3 /tmp/spoof_beamline.py \
         > /tmp/blackhole_ioc.log 2>&1
 '
+
+docker exec hexsim-base rm -rf "/root/.ipython/profile_test"
+docker exec -it hexsim-base mkdir -p "/root/.ipython/profile_test/"
+docker exec hexsim-base mkdir -p "${profile_location}/scripts"
+docker cp "${root}/scripts/bsui.py" "hexsim-base:${profile_location}/scripts/bsui.py"
 
 # Runs bsui.py interactively within the base docker container ---------------------------------------------------
 
