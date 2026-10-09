@@ -26,8 +26,6 @@ ENV ENDSTATION=${ENDSTATION}
 ARG profile_location
 ENV profile_location=${profile_location}
 
-COPY scripts/spoof_beamline.py /usr/local/bin/spoof_beamline.py
-
 WORKDIR ${profile_location}
 COPY . ${profile_location}
 
@@ -36,5 +34,5 @@ COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-CMD ["python", "/usr/local/bin/spoof_beamline.py"]
+CMD ["bash"]
 

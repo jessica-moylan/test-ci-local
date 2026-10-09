@@ -38,7 +38,7 @@ services:
       PYTHONPATH: ${profile_location}
       REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
       SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
-    command: sh -lc "update-ca-certificates --fresh && printf '\n' | python /usr/local/bin/spoof_beamline.py >/tmp/spoof_beamline.log 2>&1 & exec tail -f /dev/null"
+    command: sh -lc "update-ca-certificates --fresh && exec tail -f /dev/null"
     tmpfs:
       - /etc/bluesky
     volumes:
