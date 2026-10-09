@@ -1,4 +1,164 @@
 import io, os, glob, sys, traceback, warnings
+import re
+import ophyd
+
+PLUGIN_TYPE_PVS = [
+    (re.compile(r'image\d:'), 'NDPluginStdArrays'),
+    (re.compile(r'Stats\d:'), 'NDPluginStats'),
+    (re.compile(r'CC\d:'), 'NDPluginColorConvert'),
+    (re.compile(r'Proc\d:'), 'NDPluginProcess'),
+    (re.compile(r'Over\d:'), 'NDPluginOverlay'),
+    (re.compile(r'ROI\d:'), 'NDPluginROI'),
+    (re.compile(r'Trans\d:'), 'NDPluginTransform'),
+    (re.compile(r'netCDF\d:'), 'NDFileNetCDF'),
+    (re.compile(r'TIFF\d:'), 'NDFileTIFF'),
+    (re.compile(r'JPEG\d:'), 'NDFileJPEG'),
+    (re.compile(r'Nexus\d:'), 'NDPluginNexus'),
+    (re.compile(r'HDF\d:'), 'NDFileHDF5'),
+    (re.compile(r'Magick\d:'), 'NDFileMagick'),
+    (re.compile(r'Current\d:'), 'NDPluginStats'),
+    (re.compile(r'SumAll'), 'NDPluginStats'),
+]
+
+def fabricate_default_value(pvname):
+    """Generates realistic default values based on PV patterns."""
+    pvname_str = str(pvname or '')
+    if 'PluginType' in pvname_str:
+        for pattern, val in PLUGIN_TYPE_PVS:
+            if pattern.search(pvname_str):
+                return val
+        return 'NDPluginStats'
+    elif 'ArrayPort' in pvname_str or 'PortName' in pvname_str:
+        return pvname_str
+    elif 'EnableCallbacks' in pvname_str or 'BlockingCallbacks' in pvname_str or 'Auto' in pvname_str or 'WaitForPlugins' in pvname_str:
+        return 1
+    elif 'ImageMode' in pvname_str or 'WriteMode' in pvname_str:
+        return 'Single'
+    elif 'ArraySize' in pvname_str:
+        return 10
+    elif 'FilePathExists' in pvname_str:
+        return 1
+    elif 'file' in pvname_str.lower() and 'number' not in pvname_str.lower() and 'mode' not in pvname_str.lower():
+        return '/tmp/mock_file'
+    elif 'filenumber' in pvname_str.lower():
+        return 0
+    elif pvname_str.endswith(".EGU"):
+        return "mm"
+    elif pvname_str.endswith(".STAT") or pvname_str.endswith(".SEVR"):
+        return "NO_ALARM"
+    elif pvname_str.endswith(".ACKT") or pvname_str.endswith(".ACKS"):
+        return "YES"
+    return 0.0
+    
+class MockEpicsSignal(ophyd.Signal):
+    """Mock Signal replacing EpicsSignal and EpicsSignalRO."""
+    def __init__(self, read_pv=None, write_pv=None, *args, **kwargs):
+        if read_pv is None and len(args) > 0:
+            read_pv = args[0]
+        pvname = read_pv or write_pv or kwargs.get('pvname', 'MOCK_PV')
+        clean_name = kwargs.pop('name', None) or str(pvname).replace(':', '_').replace('.', '_')
+
+        epics_keys = [
+            'string', 'auto_monitor', 'put_complete', 'limits', 
+            'use_suffix', 'omit_from_described', 'metadata',
+            'timeout', 'connection_timeout', 'datatype', 'rtstr'
+        ]
+        for key in epics_keys:
+            kwargs.pop(key, None)
+
+        if 'value' not in kwargs:
+            kwargs['value'] = fabricate_default_value(pvname)
+
+        super().__init__(name=clean_name, **kwargs)
+
+        self._metadata_dict = {}
+        self.pvname = pvname
+        self.read_pv = read_pv
+        self.write_pv = write_pv or read_pv
+        
+    @property
+    def connected(self):
+        return True
+    
+    @property
+    def metadata(self):
+        base_meta = getattr(super(), 'metadata', {})
+        return {**base_meta, **self._metadata_dict} if isinstance(base_meta, dict) else self._metadata_dict
+
+    @metadata.setter
+    def metadata(self, val):
+        if isinstance(val, dict):
+            self._metadata_dict.update(val)
+        else:
+            self._metadata_dict['custom'] = val
+
+    def wait_for_connection(self, timeout=None):
+        return True
+
+    def _ensure_connected(self, *args, **kwargs):
+        return True
+
+    def check_value(self, value):
+        pass
+
+    def _get_with_timeout(self, *args, **kwargs):
+        return {
+            "value": self.get() if hasattr(self, '_readback') else 0.0,
+            "status": 0,
+            "severity": 0,
+            "timestamp": 0.0,
+        }
+
+class MockEpicsSignalWithRBV(MockEpicsSignal):
+    """Mock Signal replacing EpicsSignalWithRBV."""
+    def __init__(self, prefix=None, *args, **kwargs):
+        if prefix is None and len(args) > 0:
+            prefix = args[0]
+        read_pv = f"{prefix}_RBV" if prefix else "MOCK_RBV"
+        write_pv = prefix or "MOCK_PV"
+        super().__init__(read_pv=read_pv, write_pv=write_pv, **kwargs)
+
+class MockEpicsMotor(ophyd.EpicsMotor):
+    """Mock Motor retaining standard EpicsMotor component structure without EPICS connection."""
+    def __init__(self, prefix=None, *args, **kwargs):
+        if prefix is None and len(args) > 0:
+            prefix = args[0]
+        clean_name = kwargs.pop('name', None) or str(prefix or 'mock_motor').replace(':', '_').replace('{', '_').replace('}', '_')
+        super().__init__(prefix=prefix or "MOCK:MOTOR", name=clean_name, **kwargs)
+
+    def wait_for_connection(self, timeout=None):
+        return True
+
+    def _ensure_connected(self, *args, **kwargs):
+        return True
+
+    def __getattr__(self, name):
+        if name not in self.__dict__ and not name.startswith('_'):
+            sig = MockEpicsSignal(name=f"{self.name}_{name}")
+            setattr(self, name, sig)
+            return sig
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+
+def mock_get_with_timeout(self, pv=None, *args, **kwargs):
+    pvname = getattr(pv, 'pvname', getattr(self, 'pvname', ''))
+    val = fabricate_default_value(pvname)
+    
+    return {
+        "value": val,
+        "status": 0,
+        "severity": 0,
+        "timestamp": 0.0,
+    }
+
+ophyd.EpicsSignal = MockEpicsSignal
+ophyd.EpicsSignalRO = MockEpicsSignal
+ophyd.EpicsSignalWithRBV = MockEpicsSignalWithRBV
+ophyd.EpicsMotor = MockEpicsMotor
+
+if hasattr(ophyd.signal, 'EpicsSignalBase'):
+    ophyd.signal.EpicsSignalBase.wait_for_connection = lambda self, timeout=None: True
+    ophyd.signal.EpicsSignalBase._ensure_connected = lambda self, *args, **kwargs: True
+    ophyd.signal.EpicsSignalBase._get_with_timeout = mock_get_with_timeout
 
 # Get system arguments, needed currently for SIX with user inputs
 # TODO: do both SIX endatations, six and keithley, need to be tested?

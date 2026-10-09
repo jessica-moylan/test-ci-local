@@ -7,6 +7,10 @@ post_data_security_file="${root}/configs/post_data_security.txt"
 certdir="$root/compose/certs"
 
 ENDSTATION="${1:-hex}"
+
+if [[ ${ENDSTATION} == "xfm-maia" ]]; then
+    ENDSTATION="xfm"
+fi
 export ENDSTATION
 BEAMLINE_REPO="${2:-hex-profile-collection}"
 BEAMLINE_BRANCH="${3:-main}"
@@ -15,7 +19,6 @@ declare -A redis_host
 
 redis_host[six]="xf02id1-six-redis1.nsls2.bnl.gov"
 redis_host[hxn]="xf03id1-hxn-redis1.nsls2.bnl.gov"
-redis_host[maia]="xf04bm-maia-redis1.nsls2.bnl.gov"
 redis_host[xfm]="xf04bm-xfm-redis1.nsls2.bnl.gov"
 redis_host[isr]="xf04id1-isr-redis1.nsls2.bnl.gov"
 redis_host[srx]="xf05id2-srx-redis1.nsls2.bnl.gov"
@@ -189,17 +192,6 @@ export compose_file="${root}/compose/docker-compose.yml"
 export BEAMLINE_ACRONYM="${ENDSTATION}"
 export BEAMLINE_REPO="${BEAMLINE_REPO}"
 "$here/tiled.sh"
-
-docker cp "${root}/scripts/spoof_beamline.py" \
-    hexsim-base:/tmp/spoof_beamline.py
-
-docker exec -d hexsim-base sh -lc '
-    export EPICS_CA_AUTO_ADDR_LIST=NO
-    export EPICS_CA_ADDR_LIST=127.0.0.1
-
-    printf "\n" | python3 /tmp/spoof_beamline.py \
-        > /tmp/blackhole_ioc.log 2>&1
-'
 
 docker exec hexsim-base rm -rf "/root/.ipython/profile_test"
 docker exec -it hexsim-base mkdir -p "/root/.ipython/profile_test/"
