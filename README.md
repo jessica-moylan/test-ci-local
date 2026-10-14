@@ -4,7 +4,6 @@ To run: `scripts/base.sh <tla> <profile collection> <branch>` ex: `scripts/base.
 
 Docker is required
 
-Working Profiles as of Oct 9
 A few beamlines had to be run using the pixi branches since they were not merged into main (for these profiles, the main (or master) branch is unable to be tested)
 
 Progress on beamlines:
@@ -14,12 +13,12 @@ Progress on beamlines:
 - [x] fmx - uses pixi_2026C2 branch
 - [x] fxi 
 - [x] hex - kafka errors (but non blocking)
-- [ ] hxn - need to fix pathing
+- [ ] hxn - xspress3_roi_setup takes a REALLLY long time to load up (is there a way to either just ignore this or make it faster?)
 - [x] ios
 - [x] isr
 - [ ] iss - pulls git repos locally (https://github.com/NSLS2/iss-profile-collection/blob/b2c6b292c51ec4983d041165aff6b6ce641bd13a/pixi.toml#L51)
 - [x] ixs
-- [ ] lix - posible redis DNS issue with docker
+- [x] lix
 - [x] nyx
 - [ ] opls - need to refix where ipython and where things are located in
 - [ ] pdf - AttributeError: 'CatalogOfBlueskyRuns' object has no attribute 'insert'
@@ -32,7 +31,7 @@ Progress on beamlines:
 - [x] xfm - pixi_2026C3 needs to be pushed to master
 - [ ] xfm-maia - missing `qmicroscope` dependency from pixi in pixi_2026C3
 - [ ] xfp - need to refix where ipython and where things are located in
-- [ ] xpd 
+- [x] xpd 
 - [ ] xpdd - need a consistant way tfor access
 ************** COMPLETED AT A LATER DATE ***************
 - [ ] amx
